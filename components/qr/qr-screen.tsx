@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import QRCode from 'qrcode'
-import { QrCode, Wifi, Server, Download } from 'lucide-react'
+import { QrCode, Wifi, Server, Download, Maximize2, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { config } from '@/lib/config'
 
@@ -12,6 +12,7 @@ export function QrScreen() {
   const [liveMgr, setLiveMgr] = useState(config.backendServer)
   const [dataUrl, setDataUrl] = useState<string | null>(null)
   const [payload, setPayload] = useState<string | null>(null)
+  const [maximized, setMaximized] = useState(false)
 
   const generate = async () => {
     const content = JSON.stringify({
@@ -41,7 +42,7 @@ export function QrScreen() {
   }
 
   return (
-    <div className="flex h-full flex-col">
+    <div className="relative flex h-full flex-col">
       <header className="flex h-12 shrink-0 items-center gap-2 border-b border-border px-4">
         <QrCode className="size-5 text-primary" />
         <h1 className="text-lg font-bold">QR Code 생성 · Provisioning</h1>
@@ -98,10 +99,16 @@ export function QrScreen() {
                   height={280}
                 />
               </div>
-              <Button variant="outline" onClick={download}>
-                <Download className="size-4" />
-                PNG 다운로드
-              </Button>
+              <div className="flex items-center gap-2">
+                <Button variant="outline" onClick={download}>
+                  <Download className="size-4" />
+                  PNG 다운로드
+                </Button>
+                <Button variant="outline" onClick={() => setMaximized(true)}>
+                  <Maximize2 className="size-4" />
+                  화면 확대
+                </Button>
+              </div>
               <pre className="max-w-full overflow-x-auto rounded bg-muted px-3 py-2 text-xs text-muted-foreground">
                 {payload}
               </pre>
@@ -114,6 +121,31 @@ export function QrScreen() {
           )}
         </div>
       </div>
+
+      {maximized && dataUrl && (
+        <div className="absolute inset-0 z-20 flex flex-col bg-background/98 backdrop-blur-sm">
+          <header className="flex h-12 shrink-0 items-center justify-between border-b border-border px-4">
+            <div className="flex items-center gap-2">
+              <QrCode className="size-5 text-primary" />
+              <h2 className="text-lg font-bold">QR Code · 전체 화면</h2>
+            </div>
+            <Button variant="outline" size="sm" onClick={() => setMaximized(false)}>
+              <X className="size-4" />
+              닫기
+            </Button>
+          </header>
+          <div className="flex min-h-0 flex-1 items-center justify-center p-6">
+            <div className="rounded-2xl bg-white p-6 shadow-xl">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={dataUrl || '/placeholder.svg'}
+                alt="확대된 QR 코드"
+                className="aspect-square h-auto w-full max-w-[min(80vh,80vw)]"
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
