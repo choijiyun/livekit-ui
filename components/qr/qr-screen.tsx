@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
 import { config } from '@/lib/config'
 
 export function QrScreen() {
-  const [userid, setUserid] = useState('')
+  const [ssid, setSsid] = useState('')
   const [password, setPassword] = useState('')
   const [liveMgr, setLiveMgr] = useState(config.backendServer)
   const [dataUrl, setDataUrl] = useState<string | null>(null)
@@ -15,7 +15,7 @@ export function QrScreen() {
 
   const generate = async () => {
     const content = JSON.stringify({
-      wifi: { userid, password },
+      wifi: { ssid, password },
       liveMgr,
     })
     setPayload(content)
@@ -52,10 +52,10 @@ export function QrScreen() {
         <div className="flex flex-col gap-4">
           <Fieldset icon={<Wifi className="size-4 text-primary" />} title="WiFi 설정">
             <Field
-              label="User ID"
-              value={userid}
-              onChange={setUserid}
-              placeholder="wifi-userid"
+              label="SSID"
+              value={ssid}
+              onChange={setSsid}
+              placeholder="wifi-ssid"
             />
             <Field
               label="Password"
