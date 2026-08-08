@@ -1,33 +1,57 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
-import { X, Upload, Monitor, Send, ImageIcon, Trash2 } from 'lucide-react'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { X, Upload, Monitor, Send, ImageIcon, Trash2, Crop } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
 interface ImageShareDialogProps {
   open: boolean
   onClose: () => void
-  onSend: (dataUrl: string) => void
+  onSend: (dataUrl: string) => void | Promise<void>
+}
+
+interface Rect {
+  x: number
+  y: number
+  w: number
+  h: number
 }
 
 export function ImageShareDialog({ open, onClose, onSend }: ImageShareDialogProps) {
   const [image, setImage] = useState<string | null>(null)
   const [dragging, setDragging] = useState(false)
   const [capturing, setCapturing] = useState(false)
+  const [sending, setSending] = useState(false)
+
+  // Region selection (in displayed pixels, relative to the <img>)
+  const [sel, setSel] = useState<Rect | null>(null)
+  const [drawing, setDrawing] = useState(false)
+  const startRef = useRef<{ x: number; y: number } | null>(null)
+  const imgRef = useRef<HTMLImageElement>(null)
 
   useEffect(() => {
     if (!open) {
       setImage(null)
       setDragging(false)
+      setSel(null)
+      setSending(false)
     }
   }, [open])
 
-  const readFile = useCallback((file: File) => {
-    if (!file.type.startsWith('image/')) return
-    const reader = new FileReader()
-    reader.onload = () => setImage(reader.result as string)
-    reader.readAsDataURL(file)
+  const setNewImage = useCallback((src: string) => {
+    setImage(src)
+    setSel(null)
   }, [])
+
+  const readFile = useCallback(
+    (file: File) => {
+      if (!file.type.startsWith('image/')) return
+      const reader = new FileReader()
+      reader.onload = () => setNewImage(reader.result as string)
+      reader.readAsDataURL(file)
+    },
+    [setNewImage],
+  )
 
   // Paste support while dialog is open
   useEffect(() => {
@@ -61,14 +85,13 @@ export function ImageShareDialog({ open, onClose, onSend }: ImageShareDialogProp
       const video = document.createElement('video')
       video.srcObject = stream
       await video.play()
-      // small delay so the first frame is ready
       await new Promise((r) => setTimeout(r, 250))
       const canvas = document.createElement('canvas')
       canvas.width = video.videoWidth
       canvas.height = video.videoHeight
       const ctx = canvas.getContext('2d')
       ctx?.drawImage(video, 0, 0)
-      setImage(canvas.toDataURL('image/png'))
+      setNewImage(canvas.toDataURL('image/png'))
       track.stop()
       stream.getTracks().forEach((t) => t.stop())
     } catch (err) {
@@ -78,19 +101,80 @@ export function ImageShareDialog({ open, onClose, onSend }: ImageShareDialogProp
     }
   }
 
-  const send = () => {
+  // --- Region drawing on the image ----------------------------------------
+  const relPos = (e: React.MouseEvent) => {
+    const el = imgRef.current
+    if (!el) return null
+    const r = el.getBoundingClientRect()
+    return {
+      x: Math.max(0, Math.min(e.clientX - r.left, r.width)),
+      y: Math.max(0, Math.min(e.clientY - r.top, r.height)),
+    }
+  }
+
+  const onMouseDown = (e: React.MouseEvent) => {
+    const p = relPos(e)
+    if (!p) return
+    startRef.current = p
+    setDrawing(true)
+    setSel({ x: p.x, y: p.y, w: 0, h: 0 })
+  }
+
+  const onMouseMove = (e: React.MouseEvent) => {
+    if (!drawing || !startRef.current) return
+    const p = relPos(e)
+    if (!p) return
+    const s = startRef.current
+    setSel({
+      x: Math.min(s.x, p.x),
+      y: Math.min(s.y, p.y),
+      w: Math.abs(p.x - s.x),
+      h: Math.abs(p.y - s.y),
+    })
+  }
+
+  const onMouseUp = () => {
+    setDrawing(false)
+    // discard tiny accidental drags
+    setSel((cur) => (cur && cur.w > 6 && cur.h > 6 ? cur : null))
+  }
+
+  const cropToBase64 = (): string | null => {
+    const el = imgRef.current
+    if (!el || !sel) return null
+    const scaleX = el.naturalWidth / el.clientWidth
+    const scaleY = el.naturalHeight / el.clientHeight
+    const sx = sel.x * scaleX
+    const sy = sel.y * scaleY
+    const sw = sel.w * scaleX
+    const sh = sel.h * scaleY
+    const canvas = document.createElement('canvas')
+    canvas.width = Math.max(1, Math.round(sw))
+    canvas.height = Math.max(1, Math.round(sh))
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return null
+    ctx.drawImage(el, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height)
+    return canvas.toDataURL('image/png')
+  }
+
+  const send = async () => {
     if (!image) return
-    onSend(image)
-    onClose()
+    const payload = sel ? cropToBase64() ?? image : image
+    setSending(true)
+    try {
+      await onSend(payload)
+    } finally {
+      setSending(false)
+    }
   }
 
   if (!open) return null
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-background/95 backdrop-blur-sm">
+    <div className="absolute inset-0 z-40 flex flex-col bg-background/97 backdrop-blur-sm">
       <header className="flex h-12 shrink-0 items-center gap-2 border-b border-border px-4">
         <ImageIcon className="size-5 text-primary" />
-        <h2 className="text-lg font-bold">이미지 공유 · Image Share</h2>
+        <h2 className="text-lg font-bold">이미지 전송 · Image Share</h2>
         <Button
           variant="ghost"
           size="icon-sm"
@@ -123,14 +207,27 @@ export function ImageShareDialog({ open, onClose, onSend }: ImageShareDialogProp
             <Monitor className="size-4" />
             {capturing ? '캡처 중…' : '화면 캡처'}
           </Button>
+          {sel && (
+            <Button variant="outline" size="lg" onClick={() => setSel(null)}>
+              <Crop className="size-4" />
+              선택 해제
+            </Button>
+          )}
           {image && (
-            <Button variant="destructive" size="lg" onClick={() => setImage(null)}>
+            <Button
+              variant="destructive"
+              size="lg"
+              onClick={() => setNewImage('')}
+              aria-label="이미지 지우기"
+            >
               <Trash2 className="size-4" />
               지우기
             </Button>
           )}
           <span className="text-xs text-muted-foreground">
-            드래그&드롭 또는 붙여넣기(Ctrl+V)도 지원합니다.
+            {image
+              ? '이미지 위를 드래그하면 전송할 사각 영역을 지정할 수 있습니다.'
+              : '드래그&드롭 또는 붙여넣기(Ctrl+V)도 지원합니다.'}
           </span>
         </div>
 
@@ -146,12 +243,28 @@ export function ImageShareDialog({ open, onClose, onSend }: ImageShareDialogProp
           }`}
         >
           {image ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={image || '/placeholder.svg'}
-              alt="공유할 이미지 미리보기"
-              className="max-h-full max-w-full object-contain"
-            />
+            <div
+              className="relative inline-block max-h-full max-w-full cursor-crosshair select-none"
+              onMouseDown={onMouseDown}
+              onMouseMove={onMouseMove}
+              onMouseUp={onMouseUp}
+              onMouseLeave={() => drawing && onMouseUp()}
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                ref={imgRef}
+                src={image || '/placeholder.svg'}
+                alt="공유할 이미지 미리보기"
+                draggable={false}
+                className="max-h-[70vh] max-w-full object-contain"
+              />
+              {sel && (
+                <div
+                  className="pointer-events-none absolute border-2 border-primary bg-primary/20"
+                  style={{ left: sel.x, top: sel.y, width: sel.w, height: sel.h }}
+                />
+              )}
+            </div>
           ) : (
             <div className="flex flex-col items-center gap-2 text-muted-foreground">
               <Upload className="size-12 opacity-40" />
@@ -163,10 +276,15 @@ export function ImageShareDialog({ open, onClose, onSend }: ImageShareDialogProp
           )}
         </div>
 
-        <div className="flex justify-end">
-          <Button size="lg" onClick={send} disabled={!image}>
+        <div className="flex items-center justify-end gap-2">
+          {sel && (
+            <span className="mr-auto text-xs font-medium text-primary">
+              선택 영역: {Math.round(sel.w)} × {Math.round(sel.h)} px
+            </span>
+          )}
+          <Button size="lg" onClick={send} disabled={!image || sending}>
             <Send className="size-4" />
-            전송
+            {sending ? '전송 중…' : sel ? '선택 영역 전송' : '전체 전송'}
           </Button>
         </div>
       </div>
