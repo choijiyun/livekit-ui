@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { X, Mic, MicOff, Radio } from 'lucide-react'
+import { X, Mic, MicOff, Radio, Camera, AlertTriangle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { VideoSurface } from '@/components/video-surface'
 import { ImageShareDialog } from '@/components/live/image-share-dialog'
@@ -13,6 +13,7 @@ import {
   shareImage,
   shareText,
   shareRtsp,
+  shareCamera,
   toBase64,
   type ShareColor,
   type ShareHistoryItem,
@@ -37,6 +38,8 @@ export function LiveGl({ room, mock, onClose }: LiveGlProps) {
   const [imageOpen, setImageOpen] = useState(false)
   const [textOpen, setTextOpen] = useState(false)
   const [rtspOpen, setRtspOpen] = useState(false)
+  const [cameraConfirmOpen, setCameraConfirmOpen] = useState(false)
+  const [cameraSending, setCameraSending] = useState(false)
   // History lives only while this Viewer/GL session is open; unmount clears it.
   const [history, setHistory] = useState<ShareHistoryItem[]>([])
 
@@ -47,7 +50,7 @@ export function LiveGl({ room, mock, onClose }: LiveGlProps) {
     status === 'connecting' ? 'connecting' : status === 'mock' ? 'mock' : 'idle'
 
   const handleSendImage = async (dataUrl: string) => {
-    const res = await shareImage(toBase64(dataUrl))
+    const res = await shareImage(room.roomName, toBase64(dataUrl))
     addHistory({
       id: makeId(),
       type: 'image',
@@ -64,7 +67,7 @@ export function LiveGl({ room, mock, onClose }: LiveGlProps) {
     color: ShareColor
     text: string
   }) => {
-    const res = await shareText(payload)
+    const res = await shareText(room.roomName, payload)
     addHistory({
       id: makeId(),
       type: 'text',
@@ -79,7 +82,7 @@ export function LiveGl({ room, mock, onClose }: LiveGlProps) {
   }
 
   const handleSendRtsp = async (url: string) => {
-    const res = await shareRtsp(url)
+    const res = await shareRtsp(room.roomName, url)
     addHistory({
       id: makeId(),
       type: 'rtsp',
@@ -89,6 +92,20 @@ export function LiveGl({ room, mock, onClose }: LiveGlProps) {
       url,
     })
     setRtspOpen(false)
+  }
+
+  const handleSendCamera = async () => {
+    setCameraSending(true)
+    const res = await shareCamera(room.roomName)
+    addHistory({
+      id: makeId(),
+      type: 'camera',
+      at: Date.now(),
+      ok: res.ok,
+      mock: res.mock,
+    })
+    setCameraSending(false)
+    setCameraConfirmOpen(false)
   }
 
   return (
@@ -140,6 +157,7 @@ export function LiveGl({ room, mock, onClose }: LiveGlProps) {
           onOpenImage={() => setImageOpen(true)}
           onOpenText={() => setTextOpen(true)}
           onOpenRtsp={() => setRtspOpen(true)}
+          onRequestCamera={() => setCameraConfirmOpen(true)}
         />
 
         {/* Share popups overlay the whole right main area */}
@@ -158,6 +176,40 @@ export function LiveGl({ room, mock, onClose }: LiveGlProps) {
           onClose={() => setRtspOpen(false)}
           onSend={handleSendRtsp}
         />
+
+        {cameraConfirmOpen && (
+          <div className="absolute inset-0 z-30 flex items-center justify-center bg-background/70 p-6 backdrop-blur-sm">
+            <div className="w-full max-w-sm rounded-2xl border border-border bg-card p-6 shadow-xl">
+              <div className="mb-3 flex items-center gap-2">
+                <span className="flex size-9 items-center justify-center rounded-full bg-primary/15 text-primary">
+                  <Camera className="size-5" />
+                </span>
+                <h2 className="text-lg font-bold">영상공유 요청</h2>
+              </div>
+              <p className="text-sm leading-relaxed text-muted-foreground">
+                <span className="font-semibold text-foreground">{room.roomName}</span>
+                {' '}Smart Glass에 카메라 영상 공유를 요청하시겠습니까?
+              </p>
+              <div className="mt-3 flex items-start gap-2 rounded-lg border border-border bg-background/50 p-2.5 text-xs text-muted-foreground">
+                <AlertTriangle className="mt-0.5 size-3.5 shrink-0 text-primary" />
+                요청 즉시 현장 작업자의 스마트 글래스에서 카메라 영상 송출이 시작됩니다.
+              </div>
+              <div className="mt-5 flex justify-end gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => setCameraConfirmOpen(false)}
+                  disabled={cameraSending}
+                >
+                  취소
+                </Button>
+                <Button onClick={handleSendCamera} disabled={cameraSending}>
+                  <Camera className="size-4" />
+                  {cameraSending ? '요청 중…' : '요청 전송'}
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )

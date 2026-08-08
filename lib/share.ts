@@ -49,7 +49,7 @@ export interface ShareResult {
 
 export interface ShareHistoryItem {
   id: string
-  type: 'image' | 'text' | 'rtsp'
+  type: 'image' | 'text' | 'rtsp' | 'camera'
   at: number
   ok: boolean
   mock: boolean
@@ -87,24 +87,39 @@ export function toBase64(dataUrl: string): string {
   return comma >= 0 ? dataUrl.slice(comma + 1) : dataUrl
 }
 
-export function shareImage(base64: string): Promise<ShareResult> {
-  return postShare('/share/image', { image: base64 })
+export function shareImage(
+  roomName: string,
+  base64: string,
+): Promise<ShareResult> {
+  return postShare('/share/image', { room_name: roomName, image: base64 })
 }
 
-export function shareText(payload: {
-  size: number
-  color: ShareColor
-  text: string
-}): Promise<ShareResult> {
+export function shareText(
+  roomName: string,
+  payload: {
+    size: number
+    color: ShareColor
+    text: string
+  },
+): Promise<ShareResult> {
   // Normalize CRLF to LF; JSON serialization encodes newlines as \n.
   const text = payload.text.replace(/\r\n/g, '\n')
   return postShare('/share/text', {
+    room_name: roomName,
     size: payload.size,
     color: payload.color,
     text,
   })
 }
 
-export function shareRtsp(url: string): Promise<ShareResult> {
-  return postShare('/share/rtsp', { url })
+export function shareRtsp(
+  roomName: string,
+  url: string,
+): Promise<ShareResult> {
+  return postShare('/share/rtsp', { room_name: roomName, url })
+}
+
+// Request the smart glass to share its live camera feed into the room.
+export function shareCamera(roomName: string): Promise<ShareResult> {
+  return postShare('/share/camera', { room_name: roomName })
 }

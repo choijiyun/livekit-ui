@@ -5,6 +5,7 @@ import {
   ImageIcon,
   Type,
   Video,
+  Camera,
   Check,
   AlertTriangle,
 } from 'lucide-react'
@@ -16,6 +17,7 @@ interface DataSharePanelProps {
   onOpenImage: () => void
   onOpenText: () => void
   onOpenRtsp: () => void
+  onRequestCamera: () => void
 }
 
 export function DataSharePanel({
@@ -23,6 +25,7 @@ export function DataSharePanel({
   onOpenImage,
   onOpenText,
   onOpenRtsp,
+  onRequestCamera,
 }: DataSharePanelProps) {
   return (
     <div className="flex w-80 shrink-0 flex-col border-l border-border bg-card">
@@ -54,6 +57,15 @@ export function DataSharePanel({
         >
           <Video className="size-4" />
           RTSP 전송
+        </Button>
+        <Button
+          size="lg"
+          variant="secondary"
+          className="justify-start"
+          onClick={onRequestCamera}
+        >
+          <Camera className="size-4" />
+          영상공유 요청
         </Button>
       </div>
 
@@ -117,6 +129,12 @@ function HistoryRow({ item }: { item: ShareHistoryItem }) {
           </span>
         )}
 
+        {item.type === 'camera' && (
+          <span className="text-sm text-muted-foreground">
+            Smart Glass 카메라 영상 공유 요청
+          </span>
+        )}
+
         <StatusLine ok={item.ok} mock={item.mock} />
       </div>
     </div>
@@ -128,6 +146,7 @@ function TypeBadge({ type }: { type: ShareHistoryItem['type'] }) {
     image: { icon: ImageIcon, label: 'IMAGE' },
     text: { icon: Type, label: 'TEXT' },
     rtsp: { icon: Video, label: 'RTSP' },
+    camera: { icon: Camera, label: 'CAMERA' },
   } as const
   const { icon: Icon, label } = map[type]
   return (
