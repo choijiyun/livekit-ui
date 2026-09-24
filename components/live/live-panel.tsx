@@ -9,9 +9,10 @@ import type { LiveSession, RoomInfo } from '@/lib/types'
 interface LivePanelProps {
   session: LiveSession | null
   mock: boolean
+  user: string
 }
 
-export function LivePanel({ session, mock }: LivePanelProps) {
+export function LivePanel({ session, mock, user }: LivePanelProps) {
   const [glRoom, setGlRoom] = useState<RoomInfo | null>(null)
 
   if (!session) {
@@ -31,6 +32,7 @@ export function LivePanel({ session, mock }: LivePanelProps) {
       <LiveGl
         room={glRoom}
         mock={mock}
+        user={user}
         onClose={() => setGlRoom(null)}
       />
     )
@@ -40,6 +42,7 @@ export function LivePanel({ session, mock }: LivePanelProps) {
     <LiveViewer
       session={session}
       mock={mock}
+      user={user}
       onSelectRoom={(room) => setGlRoom(room)}
     />
   )

@@ -11,6 +11,7 @@ import {
   Play,
   Layers,
   Users2,
+  LogOut,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
@@ -20,6 +21,8 @@ import type { ProcessInfo, SdwtInfo, LiveSession } from '@/lib/types'
 import type { MenuKey } from '@/components/app-shell'
 
 interface SidebarProps {
+  user: string
+  onLogout: () => void
   collapsed: boolean
   onToggle: () => void
   menu: MenuKey
@@ -28,6 +31,8 @@ interface SidebarProps {
 }
 
 export function Sidebar({
+  user,
+  onLogout,
   collapsed,
   onToggle,
   menu,
@@ -89,7 +94,7 @@ export function Sidebar({
 
       {/* Live selection panel */}
       {!collapsed && menu === 'live' && (
-        <LiveSelector onStartLive={onStartLive} />
+        <LiveSelector user={user} onStartLive={onStartLive} />
       )}
 
       {/* Footer: login user */}
@@ -103,12 +108,22 @@ export function Sidebar({
           <User className="size-4 shrink-0 text-primary" />
           {!collapsed && (
             <div className="flex min-w-0 flex-col leading-tight">
-              <span className="truncate text-sm font-semibold">{config.loginUser}</span>
+              <span className="truncate text-sm font-semibold">{user}</span>
               <span className="truncate text-xs text-muted-foreground">
                 {config.backendServer || 'backend 미설정 (demo)'}
               </span>
             </div>
           )}
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            className={collapsed ? 'hidden' : 'ml-auto shrink-0'}
+            onClick={onLogout}
+            title="로그아웃"
+            aria-label="로그아웃"
+          >
+            <LogOut className="size-4" />
+          </Button>
         </div>
       </div>
     </aside>
@@ -148,8 +163,10 @@ function MenuButton({
 }
 
 function LiveSelector({
+  user,
   onStartLive,
 }: {
+  user: string
   onStartLive: (session: LiveSession, mock: boolean) => void
 }) {
   const [processes, setProcesses] = useState<ProcessInfo[]>([])
@@ -165,7 +182,7 @@ function LiveSelector({
   useEffect(() => {
     let active = true
     setLoadingP(true)
-    fetchProcesses()
+    fetchProcesses(user)
       .then(({ data }) => {
         if (active) setProcesses(data)
       })
@@ -173,7 +190,7 @@ function LiveSelector({
     return () => {
       active = false
     }
-  }, [])
+  }, [user])
 
   // Load SDWTs when a process is selected
   const selectProcess = useCallback((id: string) => {
@@ -181,18 +198,18 @@ function LiveSelector({
     setSelectedSdwt(null)
     setSdwts([])
     setLoadingS(true)
-    fetchSdwts(id)
+    fetchSdwts(user, id)
       .then(({ data }) => setSdwts(data))
       .finally(() => setLoadingS(false))
-  }, [])
+  }, [user])
 
   const start = useCallback(() => {
     if (!selectedProcess || !selectedSdwt) return
     setStarting(true)
-    fetchLiveSession(selectedProcess, selectedSdwt)
+    fetchLiveSession(user, selectedProcess, selectedSdwt)
       .then(({ data, mock }) => onStartLive(data, mock))
       .finally(() => setStarting(false))
-  }, [selectedProcess, selectedSdwt, onStartLive])
+  }, [user, selectedProcess, selectedSdwt, onStartLive])
 
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-y-auto border-t border-sidebar-border">

@@ -44,14 +44,14 @@ async function post<T>(path: string, body: unknown, mockFactory: () => T): Promi
 
 // --- Processes -------------------------------------------------------------
 
-export function fetchProcesses(): Promise<ApiResult<ProcessInfo[]>> {
-  return post<ProcessInfo[]>('/processes', { user: config.loginUser }, mockProcesses)
+export function fetchProcesses(user: string): Promise<ApiResult<ProcessInfo[]>> {
+  return post<ProcessInfo[]>('/processes', { user }, mockProcesses)
 }
 
 // --- SDWT ------------------------------------------------------------------
 
-export function fetchSdwts(processId: string): Promise<ApiResult<SdwtInfo[]>> {
-  return post<SdwtInfo[]>('/sdwts', { user: config.loginUser, processId }, () =>
+export function fetchSdwts(user: string, processId: string): Promise<ApiResult<SdwtInfo[]>> {
+  return post<SdwtInfo[]>('/sdwts', { user, processId }, () =>
     mockSdwts(processId),
   )
 }
@@ -59,12 +59,13 @@ export function fetchSdwts(processId: string): Promise<ApiResult<SdwtInfo[]>> {
 // --- Live session (LiveKit endpoint + rooms) -------------------------------
 
 export function fetchLiveSession(
+  user: string,
   processId: string,
   sdwtId: string,
 ): Promise<ApiResult<LiveSession>> {
   return post<LiveSession>(
     '/live',
-    { user: config.loginUser, processId, sdwtId },
+    { user, processId, sdwtId },
     () => mockLiveSession(processId, sdwtId),
   )
 }
@@ -72,12 +73,13 @@ export function fetchLiveSession(
 // --- LiveKit token ---------------------------------------------------------
 
 export function fetchToken(
+  user: string,
   roomName: string,
   mode: TokenMode,
 ): Promise<ApiResult<LiveKitToken>> {
   return post<LiveKitToken>(
     '/token',
-    { user: config.loginUser, roomName, mode },
+    { user, roomName, mode },
     () => mockToken(roomName, mode),
   )
 }

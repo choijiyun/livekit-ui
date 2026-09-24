@@ -3,16 +3,16 @@
 import { Radio, Server, Maximize2 } from 'lucide-react'
 import { VideoSurface } from '@/components/video-surface'
 import { useViewerRoom } from '@/hooks/use-viewer-room'
-import { config } from '@/lib/config'
 import type { LiveSession, RoomInfo } from '@/lib/types'
 
 interface LiveViewerProps {
   session: LiveSession
   mock: boolean
+  user: string
   onSelectRoom: (room: RoomInfo) => void
 }
 
-export function LiveViewer({ session, mock, onSelectRoom }: LiveViewerProps) {
+export function LiveViewer({ session, mock, user, onSelectRoom }: LiveViewerProps) {
   return (
     <div className="flex h-full flex-col">
       <header className="flex h-12 shrink-0 items-center gap-3 border-b border-border px-4">
@@ -41,6 +41,7 @@ export function LiveViewer({ session, mock, onSelectRoom }: LiveViewerProps) {
             <ViewerTile
               key={room.roomName}
               room={room}
+              user={user}
               onClick={() => onSelectRoom(room)}
             />
           ))}
@@ -50,8 +51,8 @@ export function LiveViewer({ session, mock, onSelectRoom }: LiveViewerProps) {
   )
 }
 
-function ViewerTile({ room, onClick }: { room: RoomInfo; onClick: () => void }) {
-  const { status, track } = useViewerRoom(room.roomName, true)
+function ViewerTile({ room, user, onClick }: { room: RoomInfo; user: string; onClick: () => void }) {
+  const { status, track } = useViewerRoom(room.roomName, true, user)
 
   const placeholder =
     status === 'connecting' ? 'connecting' : status === 'mock' ? 'mock' : 'idle'
@@ -90,7 +91,7 @@ function ViewerTile({ room, onClick }: { room: RoomInfo; onClick: () => void }) 
             {room.participants.join(', ') || 'no participant'}
           </span>
         </div>
-        <span className="shrink-0 text-xs text-muted-foreground">{config.loginUser}</span>
+        <span className="shrink-0 text-xs text-muted-foreground">{user}</span>
       </div>
     </button>
   )

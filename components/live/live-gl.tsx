@@ -24,6 +24,7 @@ import type { RoomInfo } from '@/lib/types'
 interface LiveGlProps {
   room: RoomInfo
   mock: boolean
+  user: string
   onClose: () => void
 }
 
@@ -33,7 +34,7 @@ function makeId() {
   return `share-${Date.now()}-${historyCounter}`
 }
 
-export function LiveGl({ room, mock, onClose }: LiveGlProps) {
+export function LiveGl({ room, mock, user, onClose }: LiveGlProps) {
   const {
     status,
     videoTrack,
@@ -44,7 +45,7 @@ export function LiveGl({ room, mock, onClose }: LiveGlProps) {
     micBusy,
     micError,
     toggleMic,
-  } = useGlRoom(room.roomName)
+  } = useGlRoom(room.roomName, user)
 
   const [imageOpen, setImageOpen] = useState(false)
   const [textOpen, setTextOpen] = useState(false)
@@ -61,7 +62,7 @@ export function LiveGl({ room, mock, onClose }: LiveGlProps) {
     status === 'connecting' ? 'connecting' : status === 'mock' ? 'mock' : 'idle'
 
   const handleSendImage = async (dataUrl: string) => {
-    const res = await shareImage(room.roomName, toBase64(dataUrl))
+    const res = await shareImage(user, room.roomName, toBase64(dataUrl))
     addHistory({
       id: makeId(),
       type: 'image',
@@ -78,7 +79,7 @@ export function LiveGl({ room, mock, onClose }: LiveGlProps) {
     color: ShareColor
     text: string
   }) => {
-    const res = await shareText(room.roomName, payload)
+    const res = await shareText(user, room.roomName, payload)
     addHistory({
       id: makeId(),
       type: 'text',
@@ -93,7 +94,7 @@ export function LiveGl({ room, mock, onClose }: LiveGlProps) {
   }
 
   const handleSendRtsp = async (url: string) => {
-    const res = await shareRtsp(room.roomName, url)
+    const res = await shareRtsp(user, room.roomName, url)
     addHistory({
       id: makeId(),
       type: 'rtsp',
@@ -107,7 +108,7 @@ export function LiveGl({ room, mock, onClose }: LiveGlProps) {
 
   const handleSendCamera = async () => {
     setCameraSending(true)
-    const res = await shareCamera(room.roomName)
+    const res = await shareCamera(user, room.roomName)
     addHistory({
       id: makeId(),
       type: 'camera',

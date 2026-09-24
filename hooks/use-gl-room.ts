@@ -11,7 +11,6 @@ import {
   type RemoteParticipant,
 } from 'livekit-client'
 import { fetchToken } from '@/lib/api'
-import { config } from '@/lib/config'
 import { liveKitUrl } from '@/lib/livekit-url'
 
 export type GlStatus = 'connecting' | 'connected' | 'mock' | 'error'
@@ -44,7 +43,7 @@ const decoder = new TextDecoder()
  * Full GL session: subscribes to video, enables two-way audio, and uses the
  * LiveKit data channel for chat + image sharing.
  */
-export function useGlRoom(roomName: string | null) {
+export function useGlRoom(roomName: string | null, user: string) {
   const [status, setStatus] = useState<GlStatus>('connecting')
   const [videoTrack, setVideoTrack] = useState<RemoteTrack | null>(null)
   const [audioTracks, setAudioTracks] = useState<RemoteTrack[]>([])
@@ -73,7 +72,7 @@ export function useGlRoom(roomName: string | null) {
       setMicEnabled(false)
       setMicError(null)
       try {
-        const { data } = await fetchToken(roomName!, 'full')
+        const { data } = await fetchToken(user, roomName!, 'full')
         if (cancelled) return
 
         if (isMockUrl(data.url)) {
@@ -145,7 +144,7 @@ export function useGlRoom(roomName: string | null) {
       room?.disconnect()
       roomRef.current = null
     }
-  }, [roomName, addMessage])
+  }, [roomName, user, addMessage])
 
   const toggleMic = useCallback(async () => {
     const room = roomRef.current
@@ -211,31 +210,31 @@ export function useGlRoom(roomName: string | null) {
       const trimmed = text.trim()
       if (!trimmed) return
       const ts = Date.now()
-      publishFrame({ type: 'chat', sender: config.loginUser, text: trimmed, ts })
+      publishFrame({ type: 'chat', sender: user, text: trimmed, ts })
       addMessage({
         id: `${ts}-self`,
-        sender: config.loginUser,
+        sender: user,
         text: trimmed,
         self: true,
         ts,
       })
     },
-    [publishFrame, addMessage],
+    [publishFrame, addMessage, user],
   )
 
   const sendImage = useCallback(
     (dataUrl: string) => {
       const ts = Date.now()
-      publishFrame({ type: 'image', sender: config.loginUser, image: dataUrl, ts })
+      publishFrame({ type: 'image', sender: user, image: dataUrl, ts })
       addMessage({
         id: `${ts}-self-img`,
-        sender: config.loginUser,
+        sender: user,
         image: dataUrl,
         self: true,
         ts,
       })
     },
-    [publishFrame, addMessage],
+    [publishFrame, addMessage, user],
   )
 
   return {

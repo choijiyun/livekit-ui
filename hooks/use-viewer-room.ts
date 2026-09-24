@@ -22,7 +22,7 @@ function isMockUrl(url: string) {
  * Connects to a single room and subscribes to VIDEO tracks only.
  * Used by the live viewer grid (view-only tiles).
  */
-export function useViewerRoom(roomName: string | null, enabled: boolean) {
+export function useViewerRoom(roomName: string | null, enabled: boolean, user: string) {
   const [status, setStatus] = useState<ViewerStatus>('idle')
   const [track, setTrack] = useState<RemoteTrack | null>(null)
   const roomRef = useRef<Room | null>(null)
@@ -40,7 +40,7 @@ export function useViewerRoom(roomName: string | null, enabled: boolean) {
       setStatus('connecting')
       setTrack(null)
       try {
-        const { data } = await fetchToken(roomName!, 'view')
+        const { data } = await fetchToken(user, roomName!, 'view')
         if (cancelled) return
 
         if (isMockUrl(data.url)) {
@@ -89,7 +89,7 @@ export function useViewerRoom(roomName: string | null, enabled: boolean) {
       room?.disconnect()
       roomRef.current = null
     }
-  }, [roomName, enabled])
+  }, [roomName, enabled, user])
 
   return { status, track }
 }

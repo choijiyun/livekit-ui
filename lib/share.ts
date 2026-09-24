@@ -61,7 +61,7 @@ export interface ShareHistoryItem {
   url?: string
 }
 
-async function postShare(path: string, body: unknown): Promise<ShareResult> {
+async function postShare(user: string, path: string, body: unknown): Promise<ShareResult> {
   if (!hasBackend()) {
     console.log('[v0] share (demo, no backend):', path, body)
     return { ok: true, mock: true }
@@ -70,7 +70,7 @@ async function postShare(path: string, body: unknown): Promise<ShareResult> {
     const res = await fetch(`${config.backendApi}${path}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
+      body: JSON.stringify({ ...(body as object), user }),
       signal: AbortSignal.timeout(10000),
     })
     if (!res.ok) throw new Error(`HTTP ${res.status}`)
@@ -88,13 +88,15 @@ export function toBase64(dataUrl: string): string {
 }
 
 export function shareImage(
+  user: string,
   roomName: string,
   base64: string,
 ): Promise<ShareResult> {
-  return postShare('/share/image', { room_name: roomName, image: base64 })
+  return postShare(user, '/share/image', { room_name: roomName, image: base64 })
 }
 
 export function shareText(
+  user: string,
   roomName: string,
   payload: {
     size: number
@@ -104,7 +106,7 @@ export function shareText(
 ): Promise<ShareResult> {
   // Normalize CRLF to LF; JSON serialization encodes newlines as \n.
   const text = payload.text.replace(/\r\n/g, '\n')
-  return postShare('/share/text', {
+  return postShare(user, '/share/text', {
     room_name: roomName,
     size: payload.size,
     color: payload.color,
@@ -113,13 +115,14 @@ export function shareText(
 }
 
 export function shareRtsp(
+  user: string,
   roomName: string,
   url: string,
 ): Promise<ShareResult> {
-  return postShare('/share/rtsp', { room_name: roomName, url })
+  return postShare(user, '/share/rtsp', { room_name: roomName, url })
 }
 
 // Request the smart glass to share its live camera feed into the room.
-export function shareCamera(roomName: string): Promise<ShareResult> {
-  return postShare('/share/camera', { room_name: roomName })
+export function shareCamera(user: string, roomName: string): Promise<ShareResult> {
+  return postShare(user, '/share/camera', { room_name: roomName })
 }
