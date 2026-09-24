@@ -10,6 +10,7 @@ import {
   type RemoteParticipant,
 } from 'livekit-client'
 import { fetchToken } from '@/lib/api'
+import { liveKitUrl } from '@/lib/livekit-url'
 
 export type ViewerStatus = 'idle' | 'connecting' | 'connected' | 'mock' | 'error'
 
@@ -60,7 +61,7 @@ export function useViewerRoom(roomName: string | null, enabled: boolean) {
 
         // Subscribe to video only: connect without autosubscribe, then
         // selectively subscribe to video publications.
-        await room.connect(data.url, data.token, { autoSubscribe: false })
+        await room.connect(liveKitUrl(data.url), data.token, { autoSubscribe: false })
         if (cancelled) return
         setStatus('connected')
 

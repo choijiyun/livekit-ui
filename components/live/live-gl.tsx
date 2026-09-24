@@ -1,9 +1,10 @@
 'use client'
 
 import { useState } from 'react'
-import { X, Mic, MicOff, Radio, Camera, AlertTriangle } from 'lucide-react'
+import { X, Mic, MicOff, Radio, Camera, AlertTriangle, Volume2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { VideoSurface } from '@/components/video-surface'
+import { AudioSurface } from '@/components/audio-surface'
 import { ImageShareDialog } from '@/components/live/image-share-dialog'
 import { TextShareDialog } from '@/components/live/text-share-dialog'
 import { RtspShareDialog } from '@/components/live/rtsp-share-dialog'
@@ -33,7 +34,17 @@ function makeId() {
 }
 
 export function LiveGl({ room, mock, onClose }: LiveGlProps) {
-  const { status, videoTrack, micEnabled, toggleMic } = useGlRoom(room.roomName)
+  const {
+    status,
+    videoTrack,
+    audioTracks,
+    audioBlocked,
+    startAudio,
+    micEnabled,
+    micBusy,
+    micError,
+    toggleMic,
+  } = useGlRoom(room.roomName)
 
   const [imageOpen, setImageOpen] = useState(false)
   const [textOpen, setTextOpen] = useState(false)
@@ -138,16 +149,33 @@ export function LiveGl({ room, mock, onClose }: LiveGlProps) {
             placeholder={videoTrack ? null : placeholder}
             label={room.participants[0]}
           />
+          {audioTracks.map((track) => (
+            <AudioSurface key={track.sid} track={track} />
+          ))}
           {/* Audio control bar */}
-          <div className="absolute bottom-0 left-0 right-0 flex items-center justify-center gap-2 bg-gradient-to-t from-black/70 to-transparent p-3">
-            <Button
-              variant={micEnabled ? 'default' : 'secondary'}
-              size="lg"
-              onClick={toggleMic}
-            >
-              {micEnabled ? <Mic className="size-4" /> : <MicOff className="size-4" />}
-              {micEnabled ? '마이크 ON' : '마이크 OFF'}
-            </Button>
+          <div className="absolute bottom-0 left-0 right-0 flex flex-col items-center justify-center gap-2 bg-gradient-to-t from-black/70 to-transparent p-3">
+            {micError && (
+              <span role="alert" className="rounded bg-black/80 px-2 py-1 text-xs text-white">
+                {micError}
+              </span>
+            )}
+            <div className="flex items-center gap-2">
+              {audioBlocked && audioTracks.length > 0 && (
+                <Button variant="secondary" size="lg" onClick={startAudio}>
+                  <Volume2 className="size-4" />
+                  소리 켜기
+                </Button>
+              )}
+              <Button
+                variant={micEnabled ? 'default' : 'secondary'}
+                size="lg"
+                onClick={toggleMic}
+                disabled={status !== 'connected' || micBusy}
+              >
+                {micEnabled ? <Mic className="size-4" /> : <MicOff className="size-4" />}
+                {micBusy ? '마이크 설정 중…' : micEnabled ? '마이크 ON' : '마이크 OFF'}
+              </Button>
+            </div>
           </div>
         </div>
 

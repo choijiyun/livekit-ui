@@ -3,7 +3,7 @@ import { config, hasBackend } from './config'
 // ---------------------------------------------------------------------------
 // Smart-glass data share API.
 //
-// Each helper POSTs to {NEXT_PUBLIC_BACKEND_SERVER}/share/*. When no backend
+// Each helper POSTs through the same-origin backend proxy. When no backend
 // is configured we resolve as a "mock" success so the UI stays usable in the
 // preview/demo environment.
 // ---------------------------------------------------------------------------
@@ -67,7 +67,7 @@ async function postShare(path: string, body: unknown): Promise<ShareResult> {
     return { ok: true, mock: true }
   }
   try {
-    const res = await fetch(`${config.backendServer}${path}`, {
+    const res = await fetch(`${config.backendApi}${path}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),

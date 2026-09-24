@@ -12,6 +12,7 @@ import {
 } from 'livekit-client'
 import { fetchToken } from '@/lib/api'
 import { config } from '@/lib/config'
+import { liveKitUrl } from '@/lib/livekit-url'
 
 export type GlStatus = 'connecting' | 'connected' | 'mock' | 'error'
 
@@ -46,8 +47,12 @@ const decoder = new TextDecoder()
 export function useGlRoom(roomName: string | null) {
   const [status, setStatus] = useState<GlStatus>('connecting')
   const [videoTrack, setVideoTrack] = useState<RemoteTrack | null>(null)
+  const [audioTracks, setAudioTracks] = useState<RemoteTrack[]>([])
+  const [audioBlocked, setAudioBlocked] = useState(false)
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [micEnabled, setMicEnabled] = useState(false)
+  const [micBusy, setMicBusy] = useState(false)
+  const [micError, setMicError] = useState<string | null>(null)
   const roomRef = useRef<Room | null>(null)
 
   const addMessage = useCallback((m: ChatMessage) => {
@@ -63,6 +68,10 @@ export function useGlRoom(roomName: string | null) {
       setStatus('connecting')
       setMessages([])
       setVideoTrack(null)
+      setAudioTracks([])
+      setAudioBlocked(false)
+      setMicEnabled(false)
+      setMicError(null)
       try {
         const { data } = await fetchToken(roomName!, 'full')
         if (cancelled) return
@@ -77,9 +86,20 @@ export function useGlRoom(roomName: string | null) {
 
         room.on(RoomEvent.TrackSubscribed, (t: RemoteTrack) => {
           if (t.kind === Track.Kind.Video) setVideoTrack(t)
+          if (t.kind === Track.Kind.Audio) {
+            setAudioTracks((current) =>
+              current.includes(t) ? current : [...current, t],
+            )
+          }
         })
         room.on(RoomEvent.TrackUnsubscribed, (t: RemoteTrack) => {
           if (t.kind === Track.Kind.Video) setVideoTrack((cur) => (cur === t ? null : cur))
+          if (t.kind === Track.Kind.Audio) {
+            setAudioTracks((current) => current.filter((track) => track !== t))
+          }
+        })
+        room.on(RoomEvent.AudioPlaybackStatusChanged, (canPlay: boolean) => {
+          setAudioBlocked(!canPlay)
         })
         room.on(
           RoomEvent.DataReceived,
@@ -100,7 +120,7 @@ export function useGlRoom(roomName: string | null) {
           },
         )
 
-        await room.connect(data.url, data.token, { autoSubscribe: false })
+        await room.connect(liveKitUrl(data.url), data.token, { autoSubscribe: false })
         if (cancelled) return
         setStatus('connected')
 
@@ -128,17 +148,46 @@ export function useGlRoom(roomName: string | null) {
   }, [roomName, addMessage])
 
   const toggleMic = useCallback(async () => {
-    const next = !micEnabled
-    setMicEnabled(next)
     const room = roomRef.current
-    if (room) {
-      try {
-        await room.localParticipant.setMicrophoneEnabled(next)
-      } catch (err) {
-        console.log('[v0] toggle mic failed:', String(err))
-      }
+    if (!room || status !== 'connected' || micBusy) return
+    const next = !micEnabled
+    setMicError(null)
+    if (next && !window.isSecureContext) {
+      setMicError('마이크를 사용하려면 HTTPS 또는 localhost로 접속하세요.')
+      return
     }
-  }, [micEnabled])
+    setMicBusy(true)
+    try {
+      await room.localParticipant.setMicrophoneEnabled(next)
+      const enabled = room.localParticipant.isMicrophoneEnabled
+      setMicEnabled(enabled)
+      if (next && !enabled) setMicError('마이크를 켤 수 없습니다. 브라우저 권한을 확인하세요.')
+    } catch (err) {
+      setMicEnabled(room.localParticipant.isMicrophoneEnabled)
+      const name = err instanceof Error ? err.name : ''
+      setMicError(
+        name === 'NotAllowedError'
+          ? '마이크 권한이 거부됐습니다. 브라우저 권한을 확인하세요.'
+          : name === 'NotFoundError'
+            ? '사용 가능한 마이크를 찾을 수 없습니다.'
+            : `마이크를 켤 수 없습니다: ${String(err)}`,
+      )
+    } finally {
+      setMicBusy(false)
+    }
+  }, [micEnabled, micBusy, status])
+
+  const startAudio = useCallback(async () => {
+    const room = roomRef.current
+    if (!room) return
+    try {
+      await room.startAudio()
+      setAudioBlocked(!room.canPlaybackAudio)
+    } catch (err) {
+      console.log('[v0] start audio failed:', String(err))
+      setAudioBlocked(true)
+    }
+  }, [])
 
   const publishFrame = useCallback(
     (frame: DataFrame) => {
@@ -192,8 +241,13 @@ export function useGlRoom(roomName: string | null) {
   return {
     status,
     videoTrack,
+    audioTracks,
+    audioBlocked,
+    startAudio,
     messages,
     micEnabled,
+    micBusy,
+    micError,
     toggleMic,
     sendChat,
     sendImage,

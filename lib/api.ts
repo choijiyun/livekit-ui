@@ -26,7 +26,7 @@ async function post<T>(path: string, body: unknown, mockFactory: () => T): Promi
     return { data: mockFactory(), mock: true }
   }
   try {
-    const res = await fetch(`${config.backendServer}${path}`, {
+    const res = await fetch(`${config.backendApi}${path}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
