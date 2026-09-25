@@ -100,6 +100,11 @@ function HistoryRow({ item }: { item: ShareHistoryItem }) {
       <div className="flex flex-1 flex-col gap-1 overflow-hidden">
         <div className="flex items-center gap-1.5">
           <TypeBadge type={item.type} />
+          {item.type === 'text' && item.level && (
+            <span className="rounded bg-muted px-1.5 py-0.5 text-[11px] font-semibold text-muted-foreground">
+              {item.level.toUpperCase()}
+            </span>
+          )}
           <span className="ml-auto text-[11px] tabular-nums text-muted-foreground">
             {time}
           </span>

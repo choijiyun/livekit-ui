@@ -7,6 +7,7 @@ import {
   SHARE_COLORS,
   COLOR_HEX,
   type ShareColor,
+  type ShareLevel,
 } from '@/lib/share'
 
 interface TextShareDialogProps {
@@ -15,6 +16,7 @@ interface TextShareDialogProps {
   onSend: (payload: {
     size: number
     color: ShareColor
+    level: ShareLevel
     text: string
   }) => void | Promise<void>
 }
@@ -23,6 +25,7 @@ export function TextShareDialog({ open, onClose, onSend }: TextShareDialogProps)
   const [text, setText] = useState('')
   const [size, setSize] = useState(15)
   const [color, setColor] = useState<ShareColor>('yellow')
+  const [level, setLevel] = useState<ShareLevel>('normal')
   const [sending, setSending] = useState(false)
 
   useEffect(() => {
@@ -30,6 +33,7 @@ export function TextShareDialog({ open, onClose, onSend }: TextShareDialogProps)
       setText('')
       setSize(15)
       setColor('yellow')
+      setLevel('normal')
       setSending(false)
     }
   }, [open])
@@ -38,7 +42,7 @@ export function TextShareDialog({ open, onClose, onSend }: TextShareDialogProps)
     if (!text.trim()) return
     setSending(true)
     try {
-      await onSend({ size, color, text })
+      await onSend({ size, color, level, text })
     } finally {
       setSending(false)
     }
@@ -117,6 +121,23 @@ export function TextShareDialog({ open, onClose, onSend }: TextShareDialogProps)
                 ))}
               </div>
             </div>
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <label htmlFor="text-level" className="text-sm font-medium">
+              Level
+            </label>
+            <select
+              id="text-level"
+              value={level}
+              onChange={(e) => setLevel(e.target.value as ShareLevel)}
+              className="h-9 rounded-md border border-input bg-background px-3 text-base outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40"
+            >
+              <option value="normal">일반 (normal)</option>
+              <option value="common">공지 (common)</option>
+              <option value="warning">주의 (warning)</option>
+              <option value="high">중요 (high)</option>
+            </select>
           </div>
 
           {/* Preview */}

@@ -10,6 +10,9 @@ export function QrScreen() {
   const [ssid, setSsid] = useState('')
   const [password, setPassword] = useState('')
   const [liveMgr, setLiveMgr] = useState(config.backendServer)
+  const [natsAddress, setNatsAddress] = useState('127.0.0.1:4222')
+  const [natsUser, setNatsUser] = useState('jiyuni')
+  const [natsPassword, setNatsPassword] = useState('cabin481')
   const [dataUrl, setDataUrl] = useState<string | null>(null)
   const [payload, setPayload] = useState<string | null>(null)
   const [maximized, setMaximized] = useState(false)
@@ -18,6 +21,11 @@ export function QrScreen() {
     const content = JSON.stringify({
       wifi: { ssid, password },
       liveMgr,
+      nats: {
+        address: natsAddress,
+        user: natsUser,
+        password: natsPassword,
+      },
     })
     setPayload(content)
     try {
@@ -76,6 +84,31 @@ export function QrScreen() {
               value={liveMgr}
               onChange={setLiveMgr}
               placeholder="https://liveon.example.com"
+            />
+          </Fieldset>
+
+          <Fieldset
+            icon={<Server className="size-4 text-primary" />}
+            title="NATS 설정"
+          >
+            <Field
+              label="Address"
+              value={natsAddress}
+              onChange={setNatsAddress}
+              placeholder="127.0.0.1:4222"
+            />
+            <Field
+              label="User"
+              value={natsUser}
+              onChange={setNatsUser}
+              placeholder="jiyuni"
+            />
+            <Field
+              label="Password"
+              value={natsPassword}
+              onChange={setNatsPassword}
+              placeholder="cabin481"
+              type="password"
             />
           </Fieldset>
 

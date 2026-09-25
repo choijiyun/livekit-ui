@@ -18,6 +18,8 @@ export type ShareColor =
   | 'purple'
   | 'neon'
 
+export type ShareLevel = 'normal' | 'common' | 'warning' | 'high'
+
 export const SHARE_COLORS: ShareColor[] = [
   'yellow',
   'white',
@@ -57,6 +59,7 @@ export interface ShareHistoryItem {
   image?: string // data URL for thumbnail
   text?: string
   color?: ShareColor
+  level?: ShareLevel
   size?: number
   url?: string
 }
@@ -101,6 +104,7 @@ export function shareText(
   payload: {
     size: number
     color: ShareColor
+    level: ShareLevel
     text: string
   },
 ): Promise<ShareResult> {
@@ -111,6 +115,7 @@ export function shareText(
     size: payload.size,
     color: payload.color,
     text,
+    level: payload.level,
   })
 }
 

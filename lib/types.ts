@@ -32,11 +32,18 @@ export interface LiveKitToken {
 }
 
 export interface WifiConfig {
-  userid: string
+  ssid: string
+  password: string
+}
+
+export interface NatsConfig {
+  address: string
+  user: string
   password: string
 }
 
 export interface QrPayload {
   wifi: WifiConfig
   liveMgr: string
+  nats: NatsConfig
 }

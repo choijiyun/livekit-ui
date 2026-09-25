@@ -17,6 +17,7 @@ import {
   shareCamera,
   toBase64,
   type ShareColor,
+  type ShareLevel,
   type ShareHistoryItem,
 } from '@/lib/share'
 import type { RoomInfo } from '@/lib/types'
@@ -77,6 +78,7 @@ export function LiveGl({ room, mock, user, onClose }: LiveGlProps) {
   const handleSendText = async (payload: {
     size: number
     color: ShareColor
+    level: ShareLevel
     text: string
   }) => {
     const res = await shareText(user, room.roomName, payload)
@@ -88,6 +90,7 @@ export function LiveGl({ room, mock, user, onClose }: LiveGlProps) {
       mock: res.mock,
       text: payload.text,
       color: payload.color,
+      level: payload.level,
       size: payload.size,
     })
     setTextOpen(false)
