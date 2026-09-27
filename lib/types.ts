@@ -45,5 +45,6 @@ export interface NatsConfig {
 export interface QrPayload {
   wifi: WifiConfig
   liveMgr: string
+  recordingTimeLimit: string
   nats: NatsConfig
 }

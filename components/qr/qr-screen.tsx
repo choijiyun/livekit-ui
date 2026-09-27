@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import QRCode from 'qrcode'
-import { QrCode, Wifi, Server, Download, Maximize2, X } from 'lucide-react'
+import { QrCode, Wifi, Server, Download, Maximize2, X, Eye, EyeOff, Clock } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { config } from '@/lib/config'
 
@@ -10,6 +10,7 @@ export function QrScreen() {
   const [ssid, setSsid] = useState('')
   const [password, setPassword] = useState('')
   const [liveMgr, setLiveMgr] = useState(config.backendServer)
+  const [recordingTimeLimit, setRecordingTimeLimit] = useState('15m')
   const [natsAddress, setNatsAddress] = useState('127.0.0.1:4222')
   const [natsUser, setNatsUser] = useState('jiyuni')
   const [natsPassword, setNatsPassword] = useState('cabin481')
@@ -21,6 +22,7 @@ export function QrScreen() {
     const content = JSON.stringify({
       wifi: { ssid, password },
       liveMgr,
+      recordingTimeLimit,
       nats: {
         address: natsAddress,
         user: natsUser,
@@ -72,6 +74,19 @@ export function QrScreen() {
               onChange={setPassword}
               placeholder="wifi-password"
               type="password"
+              showPasswordToggle
+            />
+          </Fieldset>
+
+          <Fieldset
+            icon={<Clock className="size-4 text-primary" />}
+            title="녹화 설정"
+          >
+            <Field
+              label="녹화 시간 제한"
+              value={recordingTimeLimit}
+              onChange={setRecordingTimeLimit}
+              placeholder="15m"
             />
           </Fieldset>
 
@@ -209,23 +224,41 @@ function Field({
   onChange,
   placeholder,
   type = 'text',
+  showPasswordToggle = false,
 }: {
   label: string
   value: string
   onChange: (v: string) => void
   placeholder?: string
   type?: string
+  showPasswordToggle?: boolean
 }) {
+  const [passwordVisible, setPasswordVisible] = useState(false)
+  const canTogglePassword = showPasswordToggle && type === 'password'
+
   return (
     <label className="flex flex-col gap-1">
       <span className="text-sm font-medium text-muted-foreground">{label}</span>
-      <input
-        type={type}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder={placeholder}
-        className="h-9 rounded-md border border-input bg-background px-3 text-base outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40"
-      />
+      <span className="relative">
+        <input
+          type={canTogglePassword && passwordVisible ? 'text' : type}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder={placeholder}
+          className={`h-9 w-full rounded-md border border-input bg-background px-3 text-base outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40 ${canTogglePassword ? 'pr-10' : ''}`}
+        />
+        {canTogglePassword && (
+          <button
+            type="button"
+            onClick={() => setPasswordVisible((visible) => !visible)}
+            aria-label={passwordVisible ? 'WiFi 비밀번호 숨기기' : 'WiFi 비밀번호 보기'}
+            aria-pressed={passwordVisible}
+            className="absolute inset-y-0 right-0 flex w-10 items-center justify-center text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/40"
+          >
+            {passwordVisible ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+          </button>
+        )}
+      </span>
     </label>
   )
 }
