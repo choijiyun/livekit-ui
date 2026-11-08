@@ -84,11 +84,11 @@ export function Sidebar({
           onClick={() => onMenuChange('live')}
         />
         <MenuButton
-          active={menu === 'qr'}
+          active={menu === 'login-qr'}
           collapsed={collapsed}
           icon={<QrCode className="size-4" />}
-          label="QR Code"
-          onClick={() => onMenuChange('qr')}
+          label="Login(QR)"
+          onClick={() => onMenuChange('login-qr')}
         />
       </nav>
 

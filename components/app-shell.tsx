@@ -4,10 +4,10 @@ import { useEffect, useState } from 'react'
 import { Sidebar } from '@/components/sidebar'
 import { LoginScreen } from '@/components/login-screen'
 import { LivePanel } from '@/components/live/live-panel'
-import { QrScreen } from '@/components/qr/qr-screen'
+import { LoginQrScreen } from '@/components/qr/login-qr-screen'
 import type { LiveSession } from '@/lib/types'
 
-export type MenuKey = 'live' | 'qr'
+export type MenuKey = 'live' | 'login-qr'
 
 export function AppShell() {
   const [user, setUser] = useState<string | null>(null)
@@ -58,7 +58,7 @@ export function AppShell() {
         {menu === 'live' ? (
           <LivePanel session={session} mock={sessionMock} user={user} />
         ) : (
-          <QrScreen />
+          <LoginQrScreen user={user} />
         )}
       </main>
     </div>

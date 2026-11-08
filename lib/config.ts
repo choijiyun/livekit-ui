@@ -1,6 +1,6 @@
 // Runtime configuration sourced from environment variables.
-// These are configurable per deployment. The backend URL is also displayed in
-// the UI and used in the QR payload; API requests use the same-origin proxy.
+// These are configurable per deployment. The backend URL is displayed in the
+// UI; API requests use the same-origin proxy.
 
 export const config = {
   // Backend server base URL (e.g. https://liveon.example.com/api)

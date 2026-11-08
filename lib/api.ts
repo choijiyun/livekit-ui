@@ -84,6 +84,25 @@ export function fetchToken(
   )
 }
 
+// --- Login(QR) register token ----------------------------------------------
+
+// POST /register/token returns the secret a device sends back to /register.
+// No mock fallback: a fake secret would produce a QR that can never register.
+export async function fetchRegisterToken(): Promise<string> {
+  if (!hasBackend()) throw new Error('backend 미설정')
+  const res = await fetch(`${config.backendApi}/register/token`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: '{}',
+    cache: 'no-store',
+    signal: AbortSignal.timeout(6000),
+  })
+  if (!res.ok) throw new Error(`HTTP ${res.status}`)
+  const { token } = (await res.json()) as { token?: string }
+  if (!token) throw new Error('응답에 token이 없습니다')
+  return token
+}
+
 // ---------------------------------------------------------------------------
 // Mock factories
 // ---------------------------------------------------------------------------
