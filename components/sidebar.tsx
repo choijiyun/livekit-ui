@@ -6,6 +6,8 @@ import {
   PanelLeftOpen,
   Radio,
   QrCode,
+  Image as ImageIcon,
+  Film,
   User,
   Loader2,
   Play,
@@ -89,6 +91,20 @@ export function Sidebar({
           icon={<QrCode className="size-4" />}
           label="Login(QR)"
           onClick={() => onMenuChange('login-qr')}
+        />
+        <MenuButton
+          active={menu === 'image'}
+          collapsed={collapsed}
+          icon={<ImageIcon className="size-4" />}
+          label="Image"
+          onClick={() => onMenuChange('image')}
+        />
+        <MenuButton
+          active={menu === 'video'}
+          collapsed={collapsed}
+          icon={<Film className="size-4" />}
+          label="Video"
+          onClick={() => onMenuChange('video')}
         />
       </nav>
 

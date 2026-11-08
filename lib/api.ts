@@ -2,9 +2,11 @@ import { config, hasBackend } from './config'
 import type {
   LiveKitToken,
   LiveSession,
+  MediaKind,
   ProcessInfo,
   RoomInfo,
   SdwtInfo,
+  StoredFile,
   TokenMode,
 } from './types'
 
@@ -84,6 +86,25 @@ export function fetchToken(
   )
 }
 
+// --- Stored captures (images) and recordings (videos) ----------------------
+
+export function fetchFiles(kind: MediaKind, glid?: string): Promise<ApiResult<StoredFile[]>> {
+  return post<{ files: StoredFile[] }>(
+    '/files',
+    { kind: kind === 'image' ? 'images' : 'videos', ...(glid ? { glid } : {}) },
+    () => ({ files: mockFiles(kind) }),
+  ).then(({ data, mock }) => ({ data: data.files ?? [], mock }))
+}
+
+// fileUrl is where the browser loads a stored file from: the manager's
+// GET /files/<key> through the same-origin proxy. A demo listing has no
+// file behind it, so images show a placeholder and videos nothing.
+export function fileUrl(file: StoredFile, mock: boolean, download = false): string | null {
+  if (mock) return file.key.startsWith('images/') ? '/placeholder.jpg' : null
+  const path = file.key.split('/').map(encodeURIComponent).join('/')
+  return `${config.backendApi}/files/${path}${download ? '?download=1' : ''}`
+}
+
 // --- Login(QR) register token ----------------------------------------------
 
 // POST /register/token returns the secret a device sends back to /register.
@@ -148,6 +169,31 @@ function mockLiveSession(processId: string, sdwtId: string): LiveSession {
     livekitPort: 7880,
     rooms,
   }
+}
+
+function mockFiles(kind: MediaKind): StoredFile[] {
+  const prefix = kind === 'image' ? 'images' : 'videos'
+  const ext = kind === 'image' ? 'png' : 'mp4'
+  const now = Date.now()
+  return [
+    ['smart01', 0, 1_240_000],
+    ['smart02', 25, 980_000],
+    ['smart01', 70, 1_510_000],
+    ['smart03', 190, 2_020_000],
+    ['smart02', 400, 1_100_000],
+  ].map(([glid, minutesAgo, size]) => {
+    const at = new Date(now - Number(minutesAgo) * 60_000)
+    const pad = (n: number) => String(n).padStart(2, '0')
+    const date = `${at.getFullYear()}/${pad(at.getMonth() + 1)}/${pad(at.getDate())}`
+    const time = `${pad(at.getHours())}${pad(at.getMinutes())}${pad(at.getSeconds())}`
+    return {
+      key: `${prefix}/${glid}/${date}/${time}.${ext}`,
+      glid: String(glid),
+      size: kind === 'image' ? Number(size) : Number(size) * 40,
+      last_modified: at.toISOString(),
+      recorded_at: at.toISOString(),
+    }
+  })
 }
 
 function mockToken(roomName: string, mode: TokenMode): LiveKitToken {

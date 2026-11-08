@@ -5,9 +5,10 @@ import { Sidebar } from '@/components/sidebar'
 import { LoginScreen } from '@/components/login-screen'
 import { LivePanel } from '@/components/live/live-panel'
 import { LoginQrScreen } from '@/components/qr/login-qr-screen'
+import { MediaScreen } from '@/components/media/media-screen'
 import type { LiveSession } from '@/lib/types'
 
-export type MenuKey = 'live' | 'login-qr'
+export type MenuKey = 'live' | 'login-qr' | 'image' | 'video'
 
 export function AppShell() {
   const [user, setUser] = useState<string | null>(null)
@@ -57,8 +58,10 @@ export function AppShell() {
       <main className="relative flex min-w-0 flex-1 flex-col">
         {menu === 'live' ? (
           <LivePanel session={session} mock={sessionMock} user={user} />
-        ) : (
+        ) : menu === 'login-qr' ? (
           <LoginQrScreen user={user} />
+        ) : (
+          <MediaScreen kind={menu} />
         )}
       </main>
     </div>

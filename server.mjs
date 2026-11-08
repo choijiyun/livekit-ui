@@ -1,11 +1,17 @@
-import { readFileSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import { createServer } from 'node:https'
 import { request as httpRequest } from 'node:http'
 import { request as httpsRequest } from 'node:https'
 import { createHmac, timingSafeEqual } from 'node:crypto'
 import { resolve } from 'node:path'
 import { rootCertificates } from 'node:tls'
+import nextEnv from '@next/env'
 import next from 'next'
+
+// The custom server reads certificate settings before Next prepares the app,
+// so load .env files explicitly first.
+const { loadEnvConfig } = nextEnv
+loadEnvConfig(process.cwd(), process.env.NODE_ENV !== 'production')
 
 const port = Number(process.env.PORT ?? 3000)
 const hostname = process.env.HTTPS_BIND_HOST ?? '0.0.0.0'
@@ -14,7 +20,13 @@ const certDirectory = resolve(
   process.cwd(),
   process.env.HTTPS_CERT_DIR ?? '../../IdeaProjects/Recipe/certs/rise-cert/server-cert',
 )
-const ca = [readFileSync(resolve(certDirectory, '..', 'rise-root-ca.crt')), ...rootCertificates]
+const legacyCaFile = resolve(certDirectory, '..', 'rise-root-ca.crt')
+const caFile = process.env.HTTPS_CA_FILE
+  ? resolve(process.cwd(), process.env.HTTPS_CA_FILE)
+  : existsSync(resolve(certDirectory, 'ca.crt'))
+    ? resolve(certDirectory, 'ca.crt')
+    : legacyCaFile
+const ca = [readFileSync(caFile), ...rootCertificates]
 const sessionCookie = 'rise_liveon_session'
 const sessionLifetimeSeconds = 60 * 60 * 12
 
@@ -163,18 +175,28 @@ async function proxyBackend(req, res) {
   upstream.pathname = `${backend.pathname.replace(/\/$/, '')}${incoming.pathname.slice('/api/backend'.length) || '/'}`
   upstream.search = incoming.search
 
-  let body
-  try {
-    body = { ...(await readJson(req, 12 * 1024 * 1024)), user }
-  } catch {
-    json(res, 400, { error: '요청 본문이 올바르지 않습니다.' })
-    return
-  }
-  const encodedBody = Buffer.from(JSON.stringify(body))
-  const headers = { ...req.headers, 'content-length': String(encodedBody.length) }
+  const headers = { ...req.headers }
   delete headers.host
   delete headers.origin
   headers['x-forwarded-proto'] = 'https'
+
+  let encodedBody
+  if (req.method === 'GET' || req.method === 'HEAD') {
+    // A file read (/files/<key>): nothing to add, and Range passes through
+    // so a video can seek.
+    delete headers['content-length']
+    delete headers['transfer-encoding']
+  } else {
+    let body
+    try {
+      body = { ...(await readJson(req, 12 * 1024 * 1024)), user }
+    } catch {
+      json(res, 400, { error: '요청 본문이 올바르지 않습니다.' })
+      return
+    }
+    encodedBody = Buffer.from(JSON.stringify(body))
+    headers['content-length'] = String(encodedBody.length)
+  }
 
   const proxy = transportFor(upstream)(upstream, { method: req.method, headers, ca }, (response) => {
     res.writeHead(response.statusCode ?? 502, response.headers)
